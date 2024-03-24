@@ -21,12 +21,22 @@ using (Socket socket = server.AcceptSocket())
     if(Path == "/")
     {
         ResponseBuff = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK\r\n\r\n");
+        socket.Send(ResponseBuff);
+        return;
     }
-    else
+    var LoweredPath = Path.ToLower();
+    string[] SplittedPath = LoweredPath.Split('/');
+    if (SplittedPath[1] == "echo")
     {
-        ResponseBuff = Encoding.ASCII.GetBytes("HTTP/1.1 404 Not Found\r\n\r\n");
+        string ReceivedEcho = LoweredPath.Split("/echo/")[1];
+        ResponseBuff = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK"+
+            $"\r\nContent-Type: text/plain" +
+            $"\r\nContent-Length{ReceivedEcho.Length}" +
+            $"\r\n\r\n{ReceivedEcho}");
+        socket.Send(ResponseBuff);
+        return;
     }
-
+    ResponseBuff = Encoding.ASCII.GetBytes("HTTP/1.1 404 Not Found\r\n\r\n");
     socket.Send(ResponseBuff);
 }
 
