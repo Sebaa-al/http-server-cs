@@ -31,7 +31,7 @@ using (Socket socket = server.AcceptSocket())
         string ReceivedEcho = LoweredPath.Split("/echo/")[1];
         ResponseBuff = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK"+
             $"\r\nContent-Type: text/plain" +
-            $"\r\nContent-Length{ReceivedEcho.Length}" +
+            $"\r\nContent-Length: {ReceivedEcho.Length}" +
             $"\r\n\r\n{ReceivedEcho}");
         socket.Send(ResponseBuff);
         return;
