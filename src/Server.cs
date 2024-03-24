@@ -24,11 +24,10 @@ using (Socket socket = server.AcceptSocket())
         socket.Send(ResponseBuff);
         return;
     }
-    var LoweredPath = Path.ToLower();
-    string[] SplittedPath = LoweredPath.Split('/');
-    if (SplittedPath[1] == "echo")
+    string[] SplittedPath = Path.Split('/');
+    if (SplittedPath[1].ToLower() == "echo")
     {
-        string ReceivedEcho = LoweredPath.Split("/echo/")[1];
+        string ReceivedEcho = Path.Split("/echo/")[1];
         ResponseBuff = Encoding.ASCII.GetBytes("HTTP/1.1 200 OK"+
             $"\r\nContent-Type: text/plain" +
             $"\r\nContent-Length: {ReceivedEcho.Length}" +
