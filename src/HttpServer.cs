@@ -48,7 +48,7 @@ namespace codecrafters_http_server.src
                 var httpResponse = HttpResponse.OK(ServerHttpVersion,
                     new Dictionary<string, string> 
                     {
-                        { "Content-Type", "text-plain"},
+                        { "Content-Type", "text/plain"},
                         { "Content-Length",Response?.Length.ToString() ?? "0" }
                     }, Response);
                     var ResponseAsString = httpResponse.ToString();
