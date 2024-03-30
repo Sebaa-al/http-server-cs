@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -21,57 +22,82 @@ namespace codecrafters_http_server.src
         {
         }
 
-        protected override byte[] ProcessRequest(byte[] Bytes)
+        protected override async Task ProcessRequest(Socket socket)
         {
-            string RequestString = DefaultEncoding.GetString(Bytes);
-            Logger.LogInformation($"{nameof(RequestString)}: {RequestString}");
-
-            var ParsedRequest = new HttpRequest(RequestString);
-
-            if(string.IsNullOrWhiteSpace(ParsedRequest.RequestUri))
+            try
             {
-                throw new ArgumentNullException("Request URI cannot be null or white space");
-            }
+                var Bytes = new byte[MaxRecvBytes];
+                int ReceivedBytesCount = await socket.ReceiveAsync(Bytes, SocketFlags.None);
+                Logger.LogInformation($"------Thread{Thread.CurrentThread.Name}{Thread.CurrentThread.ManagedThreadId} p" +
+                    $"rocessing request ");
+                string RequestString = DefaultEncoding.GetString(Bytes);
+                Logger.LogInformation($"{nameof(RequestString)}: {RequestString}");
 
-            if (!SupportedMethods.Contains(ParsedRequest.Method))
-            {
-                return DefaultEncoding.GetBytes(HttpResponse.NotImplemented(ServerHttpVersion).ToString());
-            }
-            if (ParsedRequest.RequestUri =="/")
-            {
-                return DefaultEncoding.GetBytes(HttpResponse.OK(ServerHttpVersion).ToString());
-            }
-            if (ParsedRequest.RequestUri.ToLowerInvariant().StartsWith("/echo/"))
-            {
-                var Response = HandleEcho(ParsedRequest.RequestUri);
+                var ParsedRequest = new HttpRequest(RequestString);
 
-                var httpResponse = HttpResponse.OK(ServerHttpVersion,
-                    new Dictionary<string, string> 
-                    {
-                        { "Content-Type", "text/plain"},
-                        { "Content-Length",Response?.Length.ToString() ?? "0" }
-                    }, Response);
-                    var ResponseAsString = httpResponse.ToString();
-                return DefaultEncoding.GetBytes(ResponseAsString); 
-            }
-
-
-            if (ParsedRequest.RequestUri.ToLowerInvariant().StartsWith("/user-agent"))
-            {
-                var UserAgent = ParsedRequest.Headers["User-Agent"]?.Trim();
-                var Response = HttpResponse.OK(ServerHttpVersion, new Dictionary<string, string>()
+                if (string.IsNullOrWhiteSpace(ParsedRequest.RequestUri))
                 {
-                    { "Content-Type", "text/plain" },
-                    { "Content-Length", UserAgent?.Length.ToString() ?? "0" }
-                },
-                UserAgent);
-                return DefaultEncoding.GetBytes(Response.ToString());
+                    throw new ArgumentNullException("Request URI cannot be null or white space");
+                }
+
+                if (!SupportedMethods.Contains(ParsedRequest.Method))
+                {
+                    await socket.SendAsync(DefaultEncoding.GetBytes(HttpResponse.NotImplemented(ServerHttpVersion).ToString()), SocketFlags.None);
+                    return;
+                }
+
+                if (ParsedRequest.RequestUri == Routes.Base)
+                {
+                    await socket.SendAsync(DefaultEncoding.GetBytes(HttpResponse.OK(ServerHttpVersion).ToString()), SocketFlags.None);
+                    return;
+                }
+                if (ParsedRequest.RequestUri.ToLowerInvariant().StartsWith(Routes.Echo))
+                {
+                    var Response = HandleEcho(ParsedRequest.RequestUri);
+
+                    var httpResponse = HttpResponse.OK(ServerHttpVersion,
+                        new Dictionary<string, string>
+                        {
+                            { HttpHeaderConstants.ContentType, HttpHeaderConstants.TextPlain},
+                            { HttpHeaderConstants.ContentLength,Response?.Length.ToString() ?? "0" }
+                        }, Response);
+                    var ResponseAsString = httpResponse.ToString();
+                    await socket.SendAsync(DefaultEncoding.GetBytes(ResponseAsString), SocketFlags.None);
+                    return;
+                }
+
+
+                if (ParsedRequest.RequestUri.ToLowerInvariant().StartsWith(Routes.UserAgent))
+                {
+                    var UserAgent = ParsedRequest.Headers[HttpHeaderConstants.UserAgent]?.Trim();
+                    var Response = HttpResponse.OK(ServerHttpVersion, new Dictionary<string, string>()
+                    {
+                        { HttpHeaderConstants.ContentType, HttpHeaderConstants.TextPlain},
+                        { HttpHeaderConstants.ContentLength,UserAgent?.Length.ToString() ?? "0" }
+                    },
+                    UserAgent);
+
+                    await socket.SendAsync(DefaultEncoding.GetBytes(Response.ToString()), SocketFlags.None);
+                    return;
+                }
+
+                await socket.SendAsync(DefaultEncoding.GetBytes(HttpResponse.NotFound(ServerHttpVersion).ToString()), SocketFlags.None);
+                return;
             }
-            return DefaultEncoding.GetBytes(HttpResponse.NotFound(ServerHttpVersion).ToString());
+            catch (Exception ex)
+            {
+
+                throw;
+            }
+            finally 
+            {
+                socket.Close(); 
+            }
+
         }
         string HandleEcho(string RequestUri)
         {
-            var ReceivedEcho = RequestUri["/echo/".Length..];
+            var ReceivedEcho = RequestUri[$"{Routes.Echo}/".Length..];
             return ReceivedEcho;
         }
     }

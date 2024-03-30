@@ -30,20 +30,19 @@ namespace codecrafters_http_server.src
             Logger.LogInformation($"Started server on {Ip}:{PortNumber}");
             while (!ShouldStop)
             {
-                using (Socket socket = Server.AcceptSocket())
-                {
-                    var RequestBuff = new byte[MaxRecvBytes];
-                    int ReceivedCount = socket.Receive(RequestBuff);
-                    Logger.LogInformation($"{nameof(ReceivedCount)}:{ReceivedCount}");
-                    byte[] Response = ProcessRequest(RequestBuff);
-                    socket.Send(Response);
-                }
+                Socket socket = Server.AcceptSocket();    
+                //var RequestBuff = new byte[MaxRecvBytes];
+                //int ReceivedCount = socket.Receive(RequestBuff);
+                //Logger.LogInformation($"{nameof(ReceivedCount)}:{ReceivedCount}");
+                _ = Task.Run(async () => await ProcessRequest(socket));
+                //socket.Send(Response);
+
             }
         }
         public void Stop()
         {
             ShouldStop = true;
         }
-        protected abstract byte[] ProcessRequest(byte[] Bytes);
+        protected abstract Task ProcessRequest(Socket socket);
     }
 }
