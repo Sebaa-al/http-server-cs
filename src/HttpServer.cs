@@ -28,22 +28,22 @@ namespace codecrafters_http_server.src
             this.Dir = Dir;
         }
 
-        protected override async Task ProcessRequest(Socket socket)
+        protected override async Task ProcessRequestAsync(Socket socket)
         {
             try
             {
                 var Bytes = new byte[MaxRecvBytes];
                 int ReceivedBytesCount = await socket.ReceiveAsync(Bytes, SocketFlags.None);
-                Logger.LogInformation($"------Thread{Thread.CurrentThread.Name}{Thread.CurrentThread.ManagedThreadId} processing request ");
+                Bytes = Bytes[0..ReceivedBytesCount];
+                Logger.LogInformation($"{nameof(ReceivedBytesCount)}: {ReceivedBytesCount}");
+                Logger.LogInformation($"------- Thread {Thread.CurrentThread.Name} {Thread.CurrentThread.ManagedThreadId} processing request");
                 string RequestString = DefaultEncoding.GetString(Bytes);
                 Logger.LogInformation($"{nameof(RequestString)}: {RequestString}");
 
                 var ParsedRequest = new HttpRequest(RequestString);
 
-                if (string.IsNullOrWhiteSpace(ParsedRequest.RequestUri))
-                {
-                    throw new ArgumentNullException("Request URI cannot be null or white space");
-                }
+                if (string.IsNullOrWhiteSpace(ParsedRequest.RequestUri))                
+                    throw new ArgumentNullException("Request URI cannot be null or white space");        
 
                 if (!SupportedMethods.Contains(ParsedRequest.Method))
                 {
@@ -53,13 +53,14 @@ namespace codecrafters_http_server.src
 
                 switch (ParsedRequest.RequestUri.ToLowerInvariant())
                 {
+
                     case Routes.Base:
                         await socket.SendAsync(DefaultEncoding.GetBytes(HttpResponse.OK(ServerHttpVersion).ToString()), SocketFlags.None);
                         break;
 
                     case var uri when uri.StartsWith(Routes.Echo):
                         await Echo(ParsedRequest);
-                            break;
+                        break;
 
                     case var uri when uri.StartsWith(Routes.UserAgent):
                         await UserAgent(ParsedRequest);
@@ -68,7 +69,6 @@ namespace codecrafters_http_server.src
                     case var uri when uri.StartsWith(Routes.Files):
                         await Files(ParsedRequest);
                         break;
-
                     default:
                         await NotFound();
                         break;
@@ -85,13 +85,13 @@ namespace codecrafters_http_server.src
 
             async Task Echo(HttpRequest ParsedRequest)
             {
-                Logger.LogInformation($"{MethodBase.GetCurrentMethod()?.Name}");
+                Logger.LogInformation($"Handling {MethodBase.GetCurrentMethod()?.Name}");
                 var Response = ParsedRequest.RequestUri?[$"{Routes.Echo}/".Length..];
                 var httpResponse = HttpResponse.OK(ServerHttpVersion,
                     new Dictionary<string, string>
                     {
-                        { HttpHeaderConstants.ContentType, HttpHeaderConstants.TextPlain},
-                        { HttpHeaderConstants.ContentLength,Response?.Length.ToString() ?? "0" }
+                    { HttpHeaderConstants.ContentType, HttpHeaderConstants.TextPlain },
+                    { HttpHeaderConstants.ContentLength, Response?.Length.ToString() ?? "0" }
                     }, Response);
                 var ResponseAsString = httpResponse.ToString();
                 await socket.SendAsync(DefaultEncoding.GetBytes(ResponseAsString), SocketFlags.None);
@@ -103,10 +103,9 @@ namespace codecrafters_http_server.src
                 var UserAgent = ParsedRequest.Headers[HttpHeaderConstants.UserAgent]?.Trim();
                 var Response = HttpResponse.OK(ServerHttpVersion, new Dictionary<string, string>()
                     {
-                        { HttpHeaderConstants.ContentType, HttpHeaderConstants.TextPlain},
-                        { HttpHeaderConstants.ContentLength,UserAgent?.Length.ToString() ?? "0" }
-                    },
-                UserAgent);
+                        { HttpHeaderConstants.ContentType, HttpHeaderConstants.TextPlain },
+                        { HttpHeaderConstants.ContentLength, UserAgent?.Length.ToString() ?? "0" }
+                    }, UserAgent);
 
                 await socket.SendAsync(DefaultEncoding.GetBytes(Response.ToString()), SocketFlags.None);
             }
@@ -131,10 +130,10 @@ namespace codecrafters_http_server.src
                     {
                         var FileContents = await File.ReadAllTextAsync(TargetFile);
                         var FileResponse = HttpResponse.OK(ServerHttpVersion, new Dictionary<string, string>()
-                        {
-                            { HttpHeaderConstants.ContentType, HttpHeaderConstants.OctetStream},
-                            { HttpHeaderConstants.ContentLength, FileContents.Length.ToString()},
-                        }, FileContents);
+                    {
+                        { HttpHeaderConstants.ContentType, HttpHeaderConstants.OctetStream },
+                        { HttpHeaderConstants.ContentLength, FileContents.Length.ToString() }
+                    }, FileContents);
                         await SendAsync(FileResponse);
                     }
                     else
@@ -157,7 +156,7 @@ namespace codecrafters_http_server.src
             {
                 await socket.SendAsync(DefaultEncoding.GetBytes(Response.ToString()), SocketFlags.None);
             }
-                async Task NotFound()
+            async Task NotFound()
             {
                 Logger.LogInformation($"Handling {MethodBase.GetCurrentMethod()?.Name}");
                 await socket.SendAsync(DefaultEncoding.GetBytes(HttpResponse.NotFound(ServerHttpVersion).ToString()), SocketFlags.None);

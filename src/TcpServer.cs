@@ -32,7 +32,7 @@ namespace codecrafters_http_server.src
             {
                 Socket socket = Server.AcceptSocket();    
 
-                _ = Task.Run(async () => await ProcessRequest(socket));
+                _ = Task.Run(async () => await ProcessRequestAsync(socket));
 
 
             }
@@ -41,6 +41,6 @@ namespace codecrafters_http_server.src
         {
             ShouldStop = true;
         }
-        protected abstract Task ProcessRequest(Socket socket);
+        protected abstract Task ProcessRequestAsync(Socket socket);
     }
 }
