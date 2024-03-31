@@ -9,6 +9,23 @@ using System.Text;
 //Console.WriteLine(">>>");
 using ILoggerFactory factory = LoggerFactory.Create(builder => builder.AddConsole());
 ILogger Logger = factory.CreateLogger("program");
-var Server = new HttpServer(IPAddress.Any, 4221, Logger);
+
+string? Dir = null;
+if (args is not null && args.Length>0)
+{
+    Logger.LogInformation($"Received{args.Length} args: {string.Join(", ", args)}");
+    if (args[0] == "--directory")
+    {
+        if (args[0].Length != 2)
+        {
+            Logger.LogError($"Received -- directory arg, but args length wasn't 2; actual length: {args.Length}");
+        }
+        else
+        {
+            Dir = args[1];
+        }
+    }
+}
+var Server = new HttpServer(IPAddress.Any, 4221, Logger, Dir);
 Server.Start();
 

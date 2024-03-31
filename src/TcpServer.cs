@@ -23,7 +23,7 @@ namespace codecrafters_http_server.src
             this.Logger = Logger;
             this.MaxRecvBytes = 1024;
         }
-        public async Task Start()
+        public Task Start()
         {
             TcpListener Server = new TcpListener(Ip, PortNumber);
             Server.Start();
