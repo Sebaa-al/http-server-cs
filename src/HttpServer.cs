@@ -20,7 +20,7 @@ namespace codecrafters_http_server.src
         private string ServerHttpVersion = "HTTP/1.1";
         public string? Dir { get; }
 
-        public HttpServer(IPAddress Ip, ushort PortNumber, ILogger Logger, string Dir) 
+        public HttpServer(IPAddress Ip, ushort PortNumber, ILogger Logger, string? Dir) 
             : base(Ip, PortNumber, Logger)
         {
             Logger.LogInformation($"Server base dir: {Dir}");
