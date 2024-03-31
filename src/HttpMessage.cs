@@ -32,10 +32,17 @@ namespace codecrafters_http_server.src
 
             StartLine = MessageLines[0];
             ProcessStartLine(StartLine);
-
             ProcessHeaders(MessageLines.Skip(1));
+            ProcessBody(MessageLines.Skip(1).Skip(Headers.Count));
 
 
+        }
+        private void ProcessBody(IEnumerable<string> RawBody)
+        {
+            foreach (var L in RawBody)
+            {
+                Body += L;
+            }
         }
         public HttpMessage()
         {

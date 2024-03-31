@@ -14,7 +14,8 @@ namespace codecrafters_http_server.src
     {
         private string[] SupportedMethods =
         {
-            "GET"
+            "GET",
+            "POST",
         };
         private Encoding DefaultEncoding = Encoding.ASCII;
         private string ServerHttpVersion = "HTTP/1.1";
@@ -63,6 +64,7 @@ namespace codecrafters_http_server.src
                     case var uri when uri.StartsWith(Routes.UserAgent):
                         await UserAgent(ParsedRequest);
                         break;
+
                     case var uri when uri.StartsWith(Routes.Files):
                         await Files(ParsedRequest);
                         break;
@@ -97,7 +99,7 @@ namespace codecrafters_http_server.src
 
             async Task UserAgent(HttpRequest ParsedRequest)
             {
-                Logger.LogInformation($"{MethodBase.GetCurrentMethod()?.Name}");
+                Logger.LogInformation($"Handling {MethodBase.GetCurrentMethod()?.Name}");
                 var UserAgent = ParsedRequest.Headers[HttpHeaderConstants.UserAgent]?.Trim();
                 var Response = HttpResponse.OK(ServerHttpVersion, new Dictionary<string, string>()
                     {
@@ -115,31 +117,47 @@ namespace codecrafters_http_server.src
                     Logger.LogError($"Dir is null, can't handle files!");
                     await socket.SendAsync(DefaultEncoding.GetBytes(HttpResponse.BadRequest(ServerHttpVersion).ToString()), SocketFlags.None);
                 }
-                Logger.LogInformation($"{MethodBase.GetCurrentMethod()?.Name}");
+                Logger.LogInformation($"Handling {MethodBase.GetCurrentMethod()?.Name}");
                 var SplittedUri = ParsedRequest.RequestUri?.Split('/');
-                if (SplittedUri is null || SplittedUri.Length<3)
+                if (SplittedUri is null || SplittedUri.Length < 3)
                 {
                     Logger.LogError("Expected a filename, Send it");
                     await NotFound();
                 }
                 var TargetFile = Path.Combine(Dir, SplittedUri[2]);
-                if (File.Exists(TargetFile))
+                if (ParsedRequest.IsGet)
                 {
-                    var FileContents = await File.ReadAllTextAsync(TargetFile);
-                    var FileResponse = HttpResponse.OK(ServerHttpVersion, new Dictionary<string, string>()
+                    if (File.Exists(TargetFile))
                     {
-                        { HttpHeaderConstants.ContentType, HttpHeaderConstants.OctetStream},
-                        { HttpHeaderConstants.ContentLength, FileContents.Length.ToString()},
-                    }, FileContents);
-                    await socket.SendAsync(DefaultEncoding.GetBytes(FileResponse.ToString()), SocketFlags.None);
+                        var FileContents = await File.ReadAllTextAsync(TargetFile);
+                        var FileResponse = HttpResponse.OK(ServerHttpVersion, new Dictionary<string, string>()
+                        {
+                            { HttpHeaderConstants.ContentType, HttpHeaderConstants.OctetStream},
+                            { HttpHeaderConstants.ContentLength, FileContents.Length.ToString()},
+                        }, FileContents);
+                        await SendAsync(FileResponse);
+                    }
+                    else
+                    {
+                        await NotFound();
+                    }
+                }
+                else if (ParsedRequest.IsPost)
+                {
+                    await File.WriteAllTextAsync(TargetFile, ParsedRequest.Body);
+                    await SendAsync(HttpResponse.Created(ServerHttpVersion));
                 }
                 else
                 {
-                    await NotFound();
+                    throw new Exception("WTF!");
                 }
-            }
 
-            async Task NotFound()
+            }
+            async Task SendAsync(HttpResponse Response)
+            {
+                await socket.SendAsync(DefaultEncoding.GetBytes(Response.ToString()), SocketFlags.None);
+            }
+                async Task NotFound()
             {
                 Logger.LogInformation($"Handling {MethodBase.GetCurrentMethod()?.Name}");
                 await socket.SendAsync(DefaultEncoding.GetBytes(HttpResponse.NotFound(ServerHttpVersion).ToString()), SocketFlags.None);
