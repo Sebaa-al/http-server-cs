@@ -28,8 +28,7 @@ namespace codecrafters_http_server.src
             {
                 var Bytes = new byte[MaxRecvBytes];
                 int ReceivedBytesCount = await socket.ReceiveAsync(Bytes, SocketFlags.None);
-                Logger.LogInformation($"------Thread{Thread.CurrentThread.Name}{Thread.CurrentThread.ManagedThreadId} p" +
-                    $"rocessing request ");
+                Logger.LogInformation($"------Thread{Thread.CurrentThread.Name}{Thread.CurrentThread.ManagedThreadId} processing request ");
                 string RequestString = DefaultEncoding.GetString(Bytes);
                 Logger.LogInformation($"{nameof(RequestString)}: {RequestString}");
 
@@ -58,8 +57,8 @@ namespace codecrafters_http_server.src
                     var httpResponse = HttpResponse.OK(ServerHttpVersion,
                         new Dictionary<string, string>
                         {
-                            { HttpHeaderConstants.ContentType, HttpHeaderConstants.TextPlain},
-                            { HttpHeaderConstants.ContentLength,Response?.Length.ToString() ?? "0" }
+                        { HttpHeaderConstants.ContentType, HttpHeaderConstants.TextPlain},
+                        { HttpHeaderConstants.ContentLength,Response?.Length.ToString() ?? "0" }
                         }, Response);
                     var ResponseAsString = httpResponse.ToString();
                     await socket.SendAsync(DefaultEncoding.GetBytes(ResponseAsString), SocketFlags.None);

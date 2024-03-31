@@ -23,7 +23,7 @@ namespace codecrafters_http_server.src
             this.Logger = Logger;
             this.MaxRecvBytes = 1024;
         }
-        public void Start()
+        public async Task Start()
         {
             TcpListener Server = new TcpListener(Ip, PortNumber);
             Server.Start();
@@ -31,11 +31,9 @@ namespace codecrafters_http_server.src
             while (!ShouldStop)
             {
                 Socket socket = Server.AcceptSocket();    
-                //var RequestBuff = new byte[MaxRecvBytes];
-                //int ReceivedCount = socket.Receive(RequestBuff);
-                //Logger.LogInformation($"{nameof(ReceivedCount)}:{ReceivedCount}");
+
                 _ = Task.Run(async () => await ProcessRequest(socket));
-                //socket.Send(Response);
+
 
             }
         }
